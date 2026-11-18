@@ -105,6 +105,14 @@ ColorSchemeModel::ColorScheme ColorSchemeModel::currentScheme() const
     return m_list[m_currentIndex].scheme;
 }
 
+int ColorSchemeModel::defaultIndex() const
+{
+    for (int i = 0; i < m_list.size(); ++i)
+        if (m_list[i].scheme == ColorScheme::Night)
+            return i;
+    return 0;
+}
+
 void ColorSchemeModel::indexChanged(const int i)
 {
     emit dataChanged(index(i), index(i));

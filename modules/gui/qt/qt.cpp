@@ -377,7 +377,7 @@ vlc_module_begin ()
                           nullptr )
         change_volatile()
 
-    add_bool( "qt-video-autoresize", true, KEEPSIZE_TEXT,
+    add_bool( "qt-video-autoresize", false, KEEPSIZE_TEXT,
               KEEPSIZE_LONGTEXT )
     add_bool( "qt-name-in-title", true, TITLE_TEXT,
               TITLE_LONGTEXT )
@@ -392,7 +392,7 @@ vlc_module_begin ()
     add_obsolete_integer( "qt-continue" )
 
 #ifdef UPDATE_CHECK
-    add_bool( "qt-updates-notif", true, UPDATER_TEXT,
+    add_bool( "qt-updates-notif", false, UPDATER_TEXT,
               UPDATER_LONGTEXT )
     add_integer_with_range( "qt-updates-days", 3, 0, 180,
               UPDATER_DAYS_TEXT, nullptr )
@@ -1251,7 +1251,7 @@ static void *Thread( void *obj )
         }
     }
 
-    app.setApplicationDisplayName( qtr("VLC media player") );
+    app.setApplicationDisplayName( QStringLiteral("VLLC") );
     app.setApplicationVersion( QString::fromUtf8(VERSION_MESSAGE) );
 
     if( QDate::currentDate().dayOfYear() >= QT_XMAS_JOKE_DAY && var_InheritBool( p_intf, "qt-icon-change" ) )

@@ -167,6 +167,8 @@ signals:
 
 private:
     void updatePalette();
+    // read "qt-accent-color" (default/orange, blue, system or #rrggbb)
+    void applyAccentColor();
 
     void makeLightPalette();
     void makeDarkPalette();

@@ -63,6 +63,11 @@ FirstRunWizard::FirstRunWizard( qt_intf_t *_p_intf, QWidget *parent)
         "</p>\n" ) );
     ui.policy->setReadOnly( true );
 
+    /* VLLC: never fetch media metadata from Internet services, so there is
+     * nothing to consent to: hide the policy section entirely. */
+    ui.privacyCheckbox->setChecked( false );
+    ui.horizontalFrame_policy->hide();
+
     /* Set up the button group for colour schemes. */
     /* Creating in Qt Designer has unstable ordering when calling buttons() */
     colorSchemeGroup = new QButtonGroup( this );
@@ -135,7 +140,7 @@ FirstRunWizard::FirstRunWizard( qt_intf_t *_p_intf, QWidget *parent)
 void FirstRunWizard::finish()
 {
     /* Welcome Page settings  */
-    config_PutInt( "metadata-network-access", ui.privacyCheckbox->isChecked() );
+    config_PutInt( "metadata-network-access", 0 );
     config_PutInt( "qt-privacy-ask", 0 );
 
     /* Colour Page settings */
@@ -300,7 +305,14 @@ void FirstRunWizard::initializePage( int id )
             colorSchemeGroup->setId( schemeButtons.at(i), schemes.at(i).scheme );
             colorSchemeImages->setId( schemeImages.at(i), schemes.at(i).scheme );
             schemeButtons.at(i)->setText( schemes.at(i).text );
-            if( !i ) updateColorLabel( schemeButtons.at(i) );
+        }
+
+        /* Dark (Night) is the default color scheme */
+        const int defaultScheme = schemes.at( p_intf->p_mi->getColorScheme()->defaultIndex() ).scheme;
+        if( QAbstractButton* btn = colorSchemeGroup->button( defaultScheme ) )
+        {
+            btn->setChecked( true );
+            updateColorLabel( btn );
         }
     }
     else if ( id == FOLDER_PAGE )
@@ -310,19 +322,19 @@ void FirstRunWizard::initializePage( int id )
 /**
  * Processes the default options on rejection of the FirstRun Wizard.
  * The default options are:
- * - Yes to metadata
- * - System/Auto colour scheme
+ * - No network metadata
+ * - Night (dark) colour scheme
  * - Modern VLC layout
  */
 void FirstRunWizard::reject()
 {
     assert(p_intf->p_mi);
     /* Welcome Page settings  */
-    config_PutInt( "metadata-network-access", 1 );
+    config_PutInt( "metadata-network-access", 0 );
     config_PutInt( "qt-privacy-ask", 0 );
 
     /* Colour Page settings */
-    p_intf->p_mi->getColorScheme()->setCurrentIndex( 0 );
+    p_intf->p_mi->getColorScheme()->setCurrentIndex( p_intf->p_mi->getColorScheme()->defaultIndex() );
 
     /* Layout Page settings */
     config_PutInt( "qt-menubar", 0 );

@@ -835,6 +835,29 @@ SPrefsPanel::SPrefsPanel( qt_intf_t *_p_intf, QWidget *_parent,
             QObject::connect( ui.colorSchemeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged)
                               , p_intf->p_mi->getColorScheme(), &ColorSchemeModel::setCurrentIndex );
 
+            /* Theme (accent) color: orange (VLC default) or blue, applied live */
+            {
+                ui.accentColorComboBox->addItem( qtr( "Orange (default)" ), QStringLiteral( "default" ) );
+                ui.accentColorComboBox->addItem( qtr( "Blue" ), QStringLiteral( "blue" ) );
+                char* accent = config_GetPsz( "qt-accent-color" );
+                const QString current = accent ? QString::fromUtf8( accent ) : QString();
+                free( accent );
+                int idx = ui.accentColorComboBox->findData( current == "orange" ? QStringLiteral( "default" ) : current );
+                if ( idx < 0 )
+                {
+                    /* custom value (system or #rrggbb): keep it selectable */
+                    ui.accentColorComboBox->addItem( current, current );
+                    idx = ui.accentColorComboBox->count() - 1;
+                }
+                ui.accentColorComboBox->setCurrentIndex( idx );
+                m_resetters.push_back( std::make_unique<PropertyResetter>( ui.accentColorComboBox, "currentIndex" ) );
+                QObject::connect( ui.accentColorComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+                                  [this, combo = ui.accentColorComboBox]( int ) {
+                    config_PutPsz( "qt-accent-color", qtu( combo->currentData().toString() ) );
+                    emit p_intf->p_mi->accentColorChanged();
+                } );
+            }
+
             const double intfScaleFloatFactor = 100;
             const auto updateIntfUserScaleFactorFromControls =
                     [this, slider = ui.intfScaleFactorSlider, spinBox = ui.intfScaleFactorSpinBox, intfScaleFloatFactor](const int value)

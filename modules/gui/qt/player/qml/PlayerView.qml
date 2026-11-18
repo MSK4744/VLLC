@@ -62,6 +62,11 @@ FocusScope {
 
     property bool _keyPressed: false
 
+    // fullscreen video: controls float over the video edge-to-edge with no
+    // opaque panel behind them, only a light gradient for legibility
+    readonly property bool _overlayControls: MainCtx.hasEmbededVideo
+                                             && (MainCtx.intfMainWindow.visibility === Window.FullScreen)
+
     // Settings
 
     Accessible.role: Accessible.Client
@@ -125,7 +130,7 @@ FocusScope {
         id: windowTheme
 
         // NOTE: We force the night theme when playing a video.
-        palette: (MainCtx.hasEmbededVideo && MainCtx.pinVideoControls === false)
+        palette: (MainCtx.hasEmbededVideo && (MainCtx.pinVideoControls === false || rootPlayer._overlayControls))
                  ? VLCStyle.darkPalette
                  : VLCStyle.palette
 
@@ -322,8 +327,11 @@ FocusScope {
                     opacity: topBar.opacity
                     visible: rootPlayer.displayFadeRectangles && !topBarAcrylicBg.visible
 
+                    implicitHeight: Math.min(rootPlayer.implicitFadeRectangleHeight,
+                                             topBar.height + VLCStyle.dp(56, VLCStyle.scale))
+
                     gradient: Gradient {
-                        GradientStop { position: 0; color: Qt.rgba(0, 0, 0, .8) }
+                        GradientStop { position: 0; color: Qt.rgba(0, 0, 0, .55) }
                         GradientStop { position: 1; color: "transparent" }
                     }
                 }
@@ -335,10 +343,14 @@ FocusScope {
 
                     opacity: controlBar.opacity
 
+                    // short and light so it doesn't hide the picture (YouTube-like)
+                    implicitHeight: Math.min(rootPlayer.implicitFadeRectangleHeight,
+                                             controlBar.height + VLCStyle.dp(64, VLCStyle.scale))
+
                     gradient: Gradient {
                         GradientStop { position: 0; color: "transparent" }
-                        GradientStop { position: .64; color: Qt.rgba(0, 0, 0, .8) }
-                        GradientStop { position: 1; color: "black" }
+                        GradientStop { position: .55; color: Qt.rgba(0, 0, 0, .35) }
+                        GradientStop { position: 1; color: Qt.rgba(0, 0, 0, .65) }
                     }
 
                     visible: rootPlayer.displayFadeRectangles && !(controlBar.background && controlBar.background.visible)
@@ -1026,7 +1038,8 @@ FocusScope {
 
             tintColor: windowTheme.bg.primary
 
-            visible: MainCtx.pinVideoControls || (MainCtx.hasEmbededVideo && !rootPlayer.displayFadeRectangles)
+            visible: !(rootPlayer._overlayControls && rootPlayer.displayFadeRectangles)
+                     && (MainCtx.pinVideoControls || (MainCtx.hasEmbededVideo && !rootPlayer.displayFadeRectangles))
         }
     }
 
@@ -1337,7 +1350,8 @@ FocusScope {
         background: Rectangle {
             id: controlBarBackground
 
-            visible: !MainCtx.hasEmbededVideo || MainCtx.pinVideoControls || !rootPlayer.displayFadeRectangles
+            visible: !(rootPlayer._overlayControls && rootPlayer.displayFadeRectangles)
+                     && (!MainCtx.hasEmbededVideo || MainCtx.pinVideoControls || !rootPlayer.displayFadeRectangles)
 
             opacity: {
                 if (MainCtx.hasEmbededVideo && !MainCtx.pinVideoControls && !rootPlayer.displayFadeRectangles) {

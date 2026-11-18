@@ -143,10 +143,15 @@ static int updatePalette(vlc_qt_theme_provider_t* obj)
         char* accentColor = var_InheritString(obj, "qt-accent-color");
         assert(accentColor);
 
-        if (!strcmp(accentColor, "default"))
+        if (!strcmp(accentColor, "default") || !strcmp(accentColor, "orange"))
         {
             accent = QColor( sys->m_isDark ? "#FF8800" : "#FF610A" );
             accentPressed = QColor( sys->m_isDark ? "#e67a30" : "#e65609" );
+        }
+        else if (!strcmp(accentColor, "blue"))
+        {
+            accent = QColor( sys->m_isDark ? "#3B8BFF" : "#1F6FEB" );
+            accentPressed = QColor( sys->m_isDark ? "#2F74D9" : "#1A5DC6" );
         }
         else if (!strcmp(accentColor, "system"))
         {

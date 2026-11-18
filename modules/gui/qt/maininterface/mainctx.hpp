@@ -574,6 +574,8 @@ signals:
     void albumSectionsChanged( bool );
     void lyricsModeChanged( bool );
     void colorSchemeChanged( QString );
+    // "qt-accent-color" was changed (e.g. Orange/Blue theme in preferences)
+    void accentColorChanged();
     void useClientSideDecorationChanged();
     void hasToolbarMenuChanged();
 

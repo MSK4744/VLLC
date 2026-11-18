@@ -120,17 +120,25 @@ T.ProgressBar {
             control.value = position
         }
 
-        function _seekToPosition(position, threshold, forcePrecise) {
+        // true when fast (keyframe) seeks were issued while dragging and a
+        // final precise seek is still owed on release
+        property bool _needPreciseSeek: false
+
+        // fast: seek to the nearest keyframe, gives instant feedback while
+        // scrubbing instead of decoding up to the exact frame on every move
+        function _seekToPosition(position, threshold, forcePrecise, fast) {
             position = Helpers.clamp(position, 0., 1.)
             control.value = position
             if (!forcePrecise) {
                 const chapter = Player.chapters.getClosestChapterFromPos(position, threshold)
                 if (chapter !== -1) {
                     Player.chapters.selectChapter(chapter)
+                    fsm._needPreciseSeek = false
                     return
                 }
             }
-            Player.position = position
+            fsm._needPreciseSeek = !!fast
+            Player.seekToPosition(position, !!fast)
         }
 
         FSMState {
@@ -145,7 +153,7 @@ T.ProgressBar {
                 "pressControl": {
                     action: (position, forcePrecise) => {
                         control.forceActiveFocus()
-                        fsm._seekToPosition(position, VLCStyle.dp(4, VLCStyle.scale) / control.width, forcePrecise)
+                        fsm._seekToPosition(position, VLCStyle.dp(4, VLCStyle.scale) / control.width, forcePrecise, false)
                     },
                     target: fsmHeld
                 }
@@ -158,10 +166,15 @@ T.ProgressBar {
             transitions: ({
                 "moveControl": {
                     action: (position, forcePrecise) => {
-                        fsm._seekToPosition(position, VLCStyle.dp(2, VLCStyle.scale) / control.width, forcePrecise)
+                        fsm._seekToPosition(position, VLCStyle.dp(2, VLCStyle.scale) / control.width, forcePrecise, true)
                     }
                 },
                 "releaseControl": {
+                    action: (position, forcePrecise) => {
+                        // land exactly where the user let go
+                        if (fsm._needPreciseSeek)
+                            fsm._seekToPosition(position, VLCStyle.dp(2, VLCStyle.scale) / control.width, forcePrecise, false)
+                    },
                     target: fsmReleased
                 },
                 "inputChanged": {
@@ -627,5 +640,54 @@ T.ProgressBar {
         state: (hoverHandler.hovered || control.visualFocus)
                ? ((control._currentChapterHovered || (Player.hasChapters && fsm._state === fsm.fsmHeld)) ? "visibleLarge" : "visible")
                : "hidden"
+    }
+
+    // YouTube-like frame preview shown above the seek bar while hovering or dragging
+    Item {
+        id: previewFrame
+
+        readonly property bool active: (hoverHandler.hovered || dragHandler.active)
+                                        && Player.hasVideoOutput
+                                        && seekPreview.available
+        // position (0..1) under the cursor, or of the handle while dragging
+        readonly property real targetPosition: hoverHandler.hovered && !dragHandler.active
+                                               ? Helpers.clamp(hoverHandler.point.position.x / control.width, 0, 1)
+                                               : control.visualPosition
+
+        readonly property real border: VLCStyle.dp(2, VLCStyle.scale)
+
+        width: VLCStyle.dp(208, VLCStyle.scale) + border * 2
+        height: Math.round((width - border * 2) / seekPreview.aspectRatio) + border * 2
+
+        // centered on the cursor, kept inside the bar, above the time tooltip
+        x: Helpers.clamp(targetPosition * control.width - width / 2, 0, Math.max(0, control.width - width))
+        y: -height - VLCStyle.dp(40, VLCStyle.scale)
+        z: 100
+
+        visible: opacity > 0
+        opacity: (active && seekPreview.hasImage) ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: VLCStyle.duration_veryShort } }
+
+        onTargetPositionChanged: if (active) seekPreview.requestAt(targetPosition)
+        onActiveChanged: if (active) seekPreview.requestAt(targetPosition)
+
+        Rectangle {
+            anchors.fill: parent
+            radius: VLCStyle.dp(8, VLCStyle.scale)
+            color: "black"
+            border.width: previewFrame.border
+            border.color: Qt.rgba(1, 1, 1, 0.85)
+        }
+
+        SeekPreview {
+            id: seekPreview
+
+            anchors.fill: parent
+            anchors.margins: previewFrame.border
+
+            ctx: MainCtx
+            source: Player.url
+            radius: VLCStyle.dp(6, VLCStyle.scale)
+        }
     }
 }

@@ -242,6 +242,9 @@ public slots:
     void jumpBwd();
     void jumpTime( VLCTime i_time );
     void jumpToPos( double );
+    // seek used by the seek bar: fast (keyframe) seeks while scrubbing give
+    // instant visual feedback, a precise seek is issued once released
+    void seekToPosition( double position, bool fast );
     void frameNext();
     void framePrev();
 

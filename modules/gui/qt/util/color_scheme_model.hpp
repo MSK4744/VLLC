@@ -60,6 +60,9 @@ public:
 
     ColorScheme currentScheme() const;
 
+    // index of the scheme used when the user hasn't picked one yet (Night)
+    int defaultIndex() const;
+
 signals:
     void currentChanged();
 

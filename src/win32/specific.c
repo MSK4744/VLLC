@@ -103,8 +103,17 @@ void system_Configure( libvlc_int_t *p_this, int i_argc, const char *const ppsz_
 
             HWND ipcwindow;
 
-            /* Wait until the 1st instance is initialized */
-            WaitForSingleObject( hmutex, INFINITE );
+            /* Wait until the 1st instance is initialized. Don't wait forever:
+             * if the other instance is stuck (or is being torn down), start
+             * normally instead of silently never opening the file. */
+            DWORD wait = WaitForSingleObject( hmutex, 5000 );
+            if( wait == WAIT_TIMEOUT || wait == WAIT_FAILED )
+            {
+                msg_Err( p_this, "one instance mode DISABLED "
+                         "(1st instance not responding)" );
+                CloseHandle( hmutex );
+                return;
+            }
 
             /* Locate the window created by the IPC helper thread of the
              * 1st instance */
@@ -145,11 +154,29 @@ void system_Configure( libvlc_int_t *p_this, int i_argc, const char *const ppsz_
                 }
                 i_data += sizeof (*p_data);
 
+                /* Let the 1st instance bring its window to the foreground
+                 * (we were started by the user, so we are allowed to). */
+                AllowSetForegroundWindow( ASFW_ANY );
+
                 /* Send our playlist items to the 1st instance */
                 wm_data.dwData = 0;
                 wm_data.cbData = i_data;
                 wm_data.lpData = p_data;
-                SendMessage( ipcwindow, WM_COPYDATA, 0, (LPARAM)&wm_data );
+                DWORD_PTR result;
+                LRESULT sent = SendMessageTimeout( ipcwindow, WM_COPYDATA, 0,
+                                                   (LPARAM)&wm_data,
+                                                   SMTO_ABORTIFHUNG, 5000,
+                                                   &result );
+                free( p_data );
+                if( sent == 0 )
+                {
+                    /* 1st instance is hung: play the file ourselves */
+                    msg_Err( p_this, "one instance mode DISABLED "
+                             "(1st instance not responding)" );
+                    ReleaseMutex( hmutex );
+                    CloseHandle( hmutex );
+                    return;
+                }
             }
 
             /* Initialization done.

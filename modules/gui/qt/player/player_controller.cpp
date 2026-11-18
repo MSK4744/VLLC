@@ -1387,6 +1387,18 @@ void PlayerController::setPosition(double position)
     vlc_player_SetPosition( d->m_player, position );
 }
 
+void PlayerController::seekToPosition(double position, bool fast)
+{
+    Q_D(PlayerController);
+    vlc_player_locker lock{ d->m_player };
+    if( !d->isCurrentItemSynced() )
+        return;
+    if( fast )
+        vlc_player_SetPositionFast( d->m_player, position );
+    else
+        vlc_player_SetPosition( d->m_player, position );
+}
+
 void PlayerController::jumpFwd()
 {
     Q_D(PlayerController);

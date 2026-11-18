@@ -62,9 +62,15 @@ static void add_to_playlist(intf_thread_t *intf, const char *uri,
     input_item_AddOptions(media, options_count, options, VLC_INPUT_OPTION_TRUSTED);
 
     vlc_playlist_Lock(playlist);
-    vlc_playlist_AppendOne(playlist, media);
-    if (play_now)
-        vlc_playlist_Start(playlist);
+    if (vlc_playlist_AppendOne(playlist, media) == VLC_SUCCESS && play_now)
+    {
+        /* Play the item that was just added: vlc_playlist_Start() alone would
+         * (re)start the current item and leave the new file queued, so opening
+         * a second file from Explorer appeared to do nothing. */
+        ssize_t index = (ssize_t)vlc_playlist_Count(playlist) - 1;
+        if (index >= 0 && vlc_playlist_GoTo(playlist, index) == VLC_SUCCESS)
+            vlc_playlist_Start(playlist);
+    }
     vlc_playlist_Unlock(playlist);
     input_item_Release(media);
 }
@@ -127,6 +133,10 @@ static LRESULT CALLBACK WMCOPYWNDPROC(HWND hwnd, UINT uMsg,
             }
 
             free( ppsz_argv );
+
+            /* Bring the interface to the front, like a newly started player */
+            if( i_argc > 0 && !p_data->enqueue )
+                var_TriggerCallback( vlc_object_instance(intf), "intf-show" );
         }
     }
 
